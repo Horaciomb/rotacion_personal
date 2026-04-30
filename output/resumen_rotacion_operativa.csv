@@ -1,0 +1,6 @@
+﻿Escenario,Descripción,Mínimo días transaccionados,Headcount RRHH afiliadores activos,Congelados operativos,Baja actividad excluida,Total excluidos,Afiliadores evaluados en KPI,Cumplimiento promedio %,Rotación operativa promedio %
+Universo completo,Todos los afiliadores activos registrados en RRHH,0,178,8,0,0,178,65.45,34.55
+Excluye sin producción,Excluye afiliadores con 0 días transaccionados,1,178,8,0,8,170,68.53,31.47
+Excluye < 2 días,Excluye afiliadores con 0 o 1 día transaccionado,2,178,8,2,10,168,69.28,30.72
+Excluye < 3 días,Excluye afiliadores con menos de 3 días transaccionados,3,178,8,8,16,162,71.35,28.65
+Excluye < 7 días,Excluye afiliadores con menos de 7 días transaccionados,7,178,8,33,41,137,77.4,22.6
