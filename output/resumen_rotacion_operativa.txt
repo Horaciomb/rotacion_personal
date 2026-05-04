@@ -1,6 +1,6 @@
 ANÁLISIS DE ROTACIÓN OPERATIVA DE AFILIADORES
 ======================================================================
-Periodo evaluado: 01/04/2026 al 27/04/2026
+Periodo evaluado: 01/04/2026 al 30/04/2026
 
 Fórmula utilizada:
 Rotación operativa = 1 - (Días transaccionados / Días hábiles disponibles)
@@ -11,57 +11,57 @@ Detalle por escenario:
 UNIVERSO COMPLETO
 ----------------------------------------------------------------------
 Todos los afiliadores activos registrados en RRHH
-Headcount RRHH afiliadores activos: 178
-Congelados operativos: 8
-Baja actividad excluida: 0
+Headcount RRHH afiliadores activos: 181
+Nunca transaccionaron: 7
+Días de inactividad evaluados: None
 Total excluidos: 0
-Afiliadores evaluados en KPI: 178
-Cumplimiento promedio %: 65.45%
-Rotación operativa promedio %: 34.55%
+Afiliadores evaluados en KPI: 181
+Cumplimiento promedio %: 65.08%
+Rotación operativa promedio %: 34.92%
 
-EXCLUYE SIN PRODUCCIÓN
+NUNCA TRANSACCIONARON
 ----------------------------------------------------------------------
-Excluye afiliadores con 0 días transaccionados
-Headcount RRHH afiliadores activos: 178
-Congelados operativos: 8
-Baja actividad excluida: 0
-Total excluidos: 8
-Afiliadores evaluados en KPI: 170
-Cumplimiento promedio %: 68.53%
-Rotación operativa promedio %: 31.47%
+Afiliadores activos que no realizaron ninguna transacción en el mes
+Headcount RRHH afiliadores activos: 181
+Nunca transaccionaron: 7
+Días de inactividad evaluados: 0
+Total excluidos: 7
+Afiliadores evaluados en KPI: 174
+Cumplimiento promedio %: 67.70%
+Rotación operativa promedio %: 32.30%
 
-EXCLUYE < 2 DÍAS
+INACTIVOS ÚLTIMOS 2 DÍAS
 ----------------------------------------------------------------------
-Excluye afiliadores con 0 o 1 día transaccionado
-Headcount RRHH afiliadores activos: 178
-Congelados operativos: 8
-Baja actividad excluida: 2
-Total excluidos: 10
-Afiliadores evaluados en KPI: 168
-Cumplimiento promedio %: 69.28%
-Rotación operativa promedio %: 30.72%
+Excluye afiliadores sin transacciones en los últimos 2 días desde la fecha de corte
+Headcount RRHH afiliadores activos: 181
+Nunca transaccionaron: 7
+Días de inactividad evaluados: 2
+Total excluidos: 43
+Afiliadores evaluados en KPI: 138
+Cumplimiento promedio %: 76.95%
+Rotación operativa promedio %: 23.05%
 
-EXCLUYE < 3 DÍAS
+INACTIVOS ÚLTIMOS 3 DÍAS
 ----------------------------------------------------------------------
-Excluye afiliadores con menos de 3 días transaccionados
-Headcount RRHH afiliadores activos: 178
-Congelados operativos: 8
-Baja actividad excluida: 8
-Total excluidos: 16
-Afiliadores evaluados en KPI: 162
-Cumplimiento promedio %: 71.35%
-Rotación operativa promedio %: 28.65%
+Excluye afiliadores sin transacciones en los últimos 3 días desde la fecha de corte
+Headcount RRHH afiliadores activos: 181
+Nunca transaccionaron: 7
+Días de inactividad evaluados: 3
+Total excluidos: 35
+Afiliadores evaluados en KPI: 146
+Cumplimiento promedio %: 75.03%
+Rotación operativa promedio %: 24.97%
 
-EXCLUYE < 7 DÍAS
+INACTIVOS ÚLTIMOS 7 DÍAS
 ----------------------------------------------------------------------
-Excluye afiliadores con menos de 7 días transaccionados
-Headcount RRHH afiliadores activos: 178
-Congelados operativos: 8
-Baja actividad excluida: 33
-Total excluidos: 41
-Afiliadores evaluados en KPI: 137
-Cumplimiento promedio %: 77.40%
-Rotación operativa promedio %: 22.60%
+Excluye afiliadores sin transacciones en los últimos 7 días desde la fecha de corte
+Headcount RRHH afiliadores activos: 181
+Nunca transaccionaron: 7
+Días de inactividad evaluados: 7
+Total excluidos: 27
+Afiliadores evaluados en KPI: 154
+Cumplimiento promedio %: 73.13%
+Rotación operativa promedio %: 26.87%
 
 Conclusión:
 La rotación operativa disminuye conforme se excluyen afiliadores con baja o nula actividad, lo que permite separar el headcount administrativo del personal realmente operativo.

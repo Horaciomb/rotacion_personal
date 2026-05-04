@@ -27,15 +27,15 @@ import seaborn as sns
 # =========================================================
 
 ARCHIVO_PERSONAL = Path("PERSONAL_YAPE.xlsx")
-ARCHIVO_PRODUCCION = Path("CONSOLIDADO_270426.xlsx")
+ARCHIVO_PRODUCCION = Path("CONSOLIDADO_300426.xlsx")
 CARPETA_OUTPUT = Path("output")
 
 ANIO = 2026
 MES = 4
 
 # Fecha máxima de producción disponible.
-# Ejemplo: si tu consolidado llega hasta 27/04/2026, usa 2026-04-27.
-FECHA_CORTE_PRODUCCION = pd.Timestamp("2026-04-27")
+# Ejemplo: si tu consolidado llega hasta 30/04/2026, usa 2026-04-30.
+FECHA_CORTE_PRODUCCION = pd.Timestamp("2026-04-30")
 
 # Columnas de PERSONAL
 COL_CARGO = "CARGO"
@@ -55,32 +55,30 @@ COL_FECHA_PROD = "fecha"
 ESCENARIOS = [
     {
         "nombre": "Universo completo",
-        "min_dias_transaccionados": 0,
+        "dias_inactividad": None,
         "descripcion": "Todos los afiliadores activos registrados en RRHH",
     },
     {
-        "nombre": "Excluye sin producción",
-        "min_dias_transaccionados": 1,
-        "descripcion": "Excluye afiliadores con 0 días transaccionados",
+        "nombre": "Nunca transaccionaron",
+        "dias_inactividad": 0,
+        "descripcion": "Afiliadores activos que no realizaron ninguna transacción en el mes",
     },
     {
-        "nombre": "Excluye < 2 días",
-        "min_dias_transaccionados": 2,
-        "descripcion": "Excluye afiliadores con 0 o 1 día transaccionado",
+        "nombre": "Inactivos últimos 2 días",
+        "dias_inactividad": 2,
+        "descripcion": "Excluye afiliadores sin transacciones en los últimos 2 días desde la fecha de corte",
     },
     {
-        "nombre": "Excluye < 3 días",
-        "min_dias_transaccionados": 3,
-        "descripcion": "Excluye afiliadores con menos de 3 días transaccionados",
+        "nombre": "Inactivos últimos 3 días",
+        "dias_inactividad": 3,
+        "descripcion": "Excluye afiliadores sin transacciones en los últimos 3 días desde la fecha de corte",
     },
     {
-        "nombre": "Excluye < 7 días",
-        "min_dias_transaccionados": 7,
-        "descripcion": "Excluye afiliadores con menos de 7 días transaccionados",
+        "nombre": "Inactivos últimos 7 días",
+        "dias_inactividad": 7,
+        "descripcion": "Excluye afiliadores sin transacciones en los últimos 7 días desde la fecha de corte",
     },
 ]
-
-
 # =========================================================
 # 2. FUNCIONES
 # =========================================================
@@ -181,12 +179,30 @@ def preparar_base_rotacion(
     fecha_inicio: pd.Timestamp,
     fecha_corte: pd.Timestamp,
 ) -> pd.DataFrame:
-    """Cruza afiliadores activos RRHH con días transaccionados."""
+    """Cruza afiliadores activos RRHH con días transaccionados y última fecha de transacción."""
     df_base_rrhh = crear_base_rrhh(df_personal, fecha_corte)
-    dias_transaccionados = calcular_dias_transaccionados(df_prod, fecha_inicio, fecha_corte)
+
+    df_prod_mes = df_prod[
+        (df_prod[COL_FECHA_PROD] >= fecha_inicio) &
+        (df_prod[COL_FECHA_PROD] <= fecha_corte) &
+        (df_prod[COL_ID_EJECUTIVO].notna())
+    ].copy()
+
+    df_prod_mes["FECHA_DIA"] = df_prod_mes[COL_FECHA_PROD].dt.normalize()
+
+    actividad = (
+        df_prod_mes
+        .groupby(COL_ID_EJECUTIVO)
+        .agg(
+            DIAS_TRANSACCIONADOS=("FECHA_DIA", "nunique"),
+            ULTIMA_FECHA_TRANSACCION=("FECHA_DIA", "max"),
+        )
+        .reset_index()
+        .rename(columns={COL_ID_EJECUTIVO: COL_CELULAR})
+    )
 
     df_base = df_base_rrhh.merge(
-        dias_transaccionados,
+        actividad,
         on=COL_CELULAR,
         how="left",
     )
@@ -195,6 +211,11 @@ def preparar_base_rotacion(
         df_base["DIAS_TRANSACCIONADOS"]
         .fillna(0)
         .astype(int)
+    )
+
+    df_base["ULTIMA_FECHA_TRANSACCION"] = pd.to_datetime(
+        df_base["ULTIMA_FECHA_TRANSACCION"],
+        errors="coerce"
     )
 
     df_base["DIAS_HABILES_DISPONIBLES"] = df_base[COL_INGRESO].apply(
@@ -206,27 +227,47 @@ def preparar_base_rotacion(
 
     return df_base
 
-
 def calcular_escenario(
     df_base: pd.DataFrame,
     nombre: str,
-    min_dias_transaccionados: int,
+    dias_inactividad,
     descripcion: str,
+    fecha_corte: pd.Timestamp,
 ) -> tuple[dict, pd.DataFrame, pd.DataFrame]:
     """
-    Calcula cumplimiento y rotación operativa para un escenario.
-    Retorna resumen, base evaluada y base excluida.
+    Calcula cumplimiento y rotación operativa usando inactividad reciente.
+    
+    dias_inactividad:
+    - None: universo completo
+    - 0: excluye solo quienes nunca transaccionaron
+    - 2, 3, 7: excluye quienes no transaccionaron dentro de los últimos N días
     """
-    if min_dias_transaccionados == 0:
+
+    if dias_inactividad is None:
         df_evaluados = df_base.copy()
         df_excluidos = df_base.iloc[0:0].copy()
-    else:
+
+    elif dias_inactividad == 0:
         df_excluidos = df_base[
-            df_base["DIAS_TRANSACCIONADOS"] < min_dias_transaccionados
+            df_base["DIAS_TRANSACCIONADOS"] == 0
         ].copy()
 
         df_evaluados = df_base[
-            df_base["DIAS_TRANSACCIONADOS"] >= min_dias_transaccionados
+            df_base["DIAS_TRANSACCIONADOS"] > 0
+        ].copy()
+
+    else:
+        fecha_limite = fecha_corte - pd.Timedelta(days=dias_inactividad - 1)
+
+        df_excluidos = df_base[
+            (df_base["DIAS_TRANSACCIONADOS"] == 0) |
+            (df_base["ULTIMA_FECHA_TRANSACCION"] < fecha_limite) |
+            (df_base["ULTIMA_FECHA_TRANSACCION"].isna())
+        ].copy()
+
+        df_evaluados = df_base[
+            (df_base["ULTIMA_FECHA_TRANSACCION"] >= fecha_limite) &
+            (df_base["ULTIMA_FECHA_TRANSACCION"] <= fecha_corte)
         ].copy()
 
     df_evaluados["CUMPLIMIENTO"] = (
@@ -255,20 +296,13 @@ def calcular_escenario(
     rotacion_promedio = df_evaluados["ROTACION_OPERATIVA"].mean() * 100 if len(df_evaluados) else 0
 
     congelados = int((df_base["DIAS_TRANSACCIONADOS"] == 0).sum())
-    baja_actividad = int(
-        (
-            (df_base["DIAS_TRANSACCIONADOS"] > 0) &
-            (df_base["DIAS_TRANSACCIONADOS"] < min_dias_transaccionados)
-        ).sum()
-    ) if min_dias_transaccionados > 0 else 0
 
     resumen = {
         "Escenario": nombre,
         "Descripción": descripcion,
-        "Mínimo días transaccionados": min_dias_transaccionados,
+        "Días inactividad evaluados": dias_inactividad,
         "Headcount RRHH afiliadores activos": len(df_base),
-        "Congelados operativos": congelados,
-        "Baja actividad excluida": baja_actividad,
+        "Nunca transaccionaron": congelados,
         "Total excluidos": len(df_excluidos),
         "Afiliadores evaluados en KPI": len(df_evaluados),
         "Cumplimiento promedio %": round(cumplimiento_promedio, 2),
@@ -276,7 +310,6 @@ def calcular_escenario(
     }
 
     return resumen, df_evaluados, df_excluidos
-
 
 def guardar_resumen_txt(resumenes: list[dict], ruta: Path, fecha_inicio, fecha_corte) -> None:
     """Guarda resumen ejecutivo en TXT."""
@@ -297,8 +330,8 @@ def guardar_resumen_txt(resumenes: list[dict], ruta: Path, fecha_inicio, fecha_c
         lineas.append("-" * 70)
         lineas.append(r["Descripción"])
         lineas.append(f"Headcount RRHH afiliadores activos: {r['Headcount RRHH afiliadores activos']}")
-        lineas.append(f"Congelados operativos: {r['Congelados operativos']}")
-        lineas.append(f"Baja actividad excluida: {r['Baja actividad excluida']}")
+        lineas.append(f"Nunca transaccionaron: {r['Nunca transaccionaron']}")
+        lineas.append(f"Días de inactividad evaluados: {r['Días inactividad evaluados']}")
         lineas.append(f"Total excluidos: {r['Total excluidos']}")
         lineas.append(f"Afiliadores evaluados en KPI: {r['Afiliadores evaluados en KPI']}")
         lineas.append(f"Cumplimiento promedio %: {r['Cumplimiento promedio %']:.2f}%")
@@ -387,6 +420,74 @@ def guardar_grafico_comparativo(resumenes: list[dict], ruta: Path) -> None:
     plt.savefig(ruta, dpi=300, bbox_inches="tight")
     plt.close()
 
+def guardar_scatter_excluidos_7_dias(
+    df_prod: pd.DataFrame,
+    df_excluidos_7_dias: pd.DataFrame,
+    ruta: Path,
+    fecha_inicio: pd.Timestamp,
+    fecha_corte: pd.Timestamp,
+) -> None:
+    """Scatterplot de registros diarios para afiliadores excluidos por inactividad de 7 días."""
+
+    ids_excluidos = set(df_excluidos_7_dias[COL_CELULAR].dropna().astype(str))
+
+    df_plot = df_prod[
+        (df_prod[COL_ID_EJECUTIVO].isin(ids_excluidos)) &
+        (df_prod[COL_FECHA_PROD] >= fecha_inicio) &
+        (df_prod[COL_FECHA_PROD] <= fecha_corte)
+    ].copy()
+
+    if df_plot.empty:
+        print("No hay producción histórica para graficar excluidos de 7 días.")
+        return
+
+    df_plot["FECHA_DIA"] = df_plot[COL_FECHA_PROD].dt.normalize()
+
+    df_plot = (
+        df_plot
+        .groupby([COL_ID_EJECUTIVO, "FECHA_DIA"])
+        .size()
+        .reset_index(name="REGISTROS_DIA")
+    )
+
+    df_nombres = df_excluidos_7_dias[
+        [COL_CELULAR, COL_NOMBRE]
+    ].drop_duplicates()
+
+    df_plot = df_plot.merge(
+        df_nombres,
+        left_on=COL_ID_EJECUTIVO,
+        right_on=COL_CELULAR,
+        how="left"
+    )
+
+    df_plot["AFILIADOR"] = (
+        df_plot[COL_NOMBRE].fillna(df_plot[COL_ID_EJECUTIVO])
+    )
+
+    plt.figure(figsize=(14, max(6, len(df_plot["AFILIADOR"].unique()) * 0.35)))
+
+    sns.scatterplot(
+        data=df_plot,
+        x="FECHA_DIA",
+        y="AFILIADOR",
+        size="REGISTROS_DIA",
+        sizes=(40, 400),
+        alpha=0.75,
+        legend=True
+    )
+
+    plt.title(
+        "Producción histórica de afiliadores excluidos por inactividad de 7 días",
+        fontsize=14,
+        fontweight="bold"
+    )
+    plt.xlabel("Fecha de producción")
+    plt.ylabel("Afiliador")
+    plt.xticks(rotation=45)
+    plt.tight_layout()
+    plt.savefig(ruta, dpi=300, bbox_inches="tight")
+    plt.close()
 
 # =========================================================
 # 3. EJECUCIÓN
@@ -419,8 +520,9 @@ def main() -> None:
         resumen, df_evaluados, df_excluidos = calcular_escenario(
             df_base=df_base_rotacion,
             nombre=escenario["nombre"],
-            min_dias_transaccionados=escenario["min_dias_transaccionados"],
+            dias_inactividad=escenario["dias_inactividad"],
             descripcion=escenario["descripcion"],
+            fecha_corte=fecha_corte,
         )
 
         resumenes.append(resumen)
@@ -454,6 +556,7 @@ def main() -> None:
         COL_INGRESO,
         COL_SALIDA,
         "DIAS_TRANSACCIONADOS",
+        "ULTIMA_FECHA_TRANSACCION",
         "DIAS_HABILES_DISPONIBLES",
         "CUMPLIMIENTO_%",
         "ROTACION_OPERATIVA_%",
@@ -493,6 +596,17 @@ def main() -> None:
     guardar_grafico_comparativo(
         resumenes=resumenes,
         ruta=CARPETA_OUTPUT / "grafico_comparativo_escenarios.png",
+    )
+    
+    # Scatterplot de excluidos por inactividad de 7 días
+    df_excluidos_7_dias = detalles["Inactivos últimos 7 días"]["excluidos"]
+
+    guardar_scatter_excluidos_7_dias(
+        df_prod=df_prod,
+        df_excluidos_7_dias=df_excluidos_7_dias,
+        ruta=CARPETA_OUTPUT / "scatter_excluidos_inactivos_7_dias.png",
+        fecha_inicio=fecha_inicio,
+        fecha_corte=fecha_corte,
     )
 
     # Mostrar en consola

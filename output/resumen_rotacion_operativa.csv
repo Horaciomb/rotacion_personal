@@ -1,6 +1,6 @@
-﻿Escenario,Descripción,Mínimo días transaccionados,Headcount RRHH afiliadores activos,Congelados operativos,Baja actividad excluida,Total excluidos,Afiliadores evaluados en KPI,Cumplimiento promedio %,Rotación operativa promedio %
-Universo completo,Todos los afiliadores activos registrados en RRHH,0,178,8,0,0,178,65.45,34.55
-Excluye sin producción,Excluye afiliadores con 0 días transaccionados,1,178,8,0,8,170,68.53,31.47
-Excluye < 2 días,Excluye afiliadores con 0 o 1 día transaccionado,2,178,8,2,10,168,69.28,30.72
-Excluye < 3 días,Excluye afiliadores con menos de 3 días transaccionados,3,178,8,8,16,162,71.35,28.65
-Excluye < 7 días,Excluye afiliadores con menos de 7 días transaccionados,7,178,8,33,41,137,77.4,22.6
+﻿Escenario,Descripción,Días inactividad evaluados,Headcount RRHH afiliadores activos,Nunca transaccionaron,Total excluidos,Afiliadores evaluados en KPI,Cumplimiento promedio %,Rotación operativa promedio %
+Universo completo,Todos los afiliadores activos registrados en RRHH,,181,7,0,181,65.08,34.92
+Nunca transaccionaron,Afiliadores activos que no realizaron ninguna transacción en el mes,0.0,181,7,7,174,67.7,32.3
+Inactivos últimos 2 días,Excluye afiliadores sin transacciones en los últimos 2 días desde la fecha de corte,2.0,181,7,43,138,76.95,23.05
+Inactivos últimos 3 días,Excluye afiliadores sin transacciones en los últimos 3 días desde la fecha de corte,3.0,181,7,35,146,75.03,24.97
+Inactivos últimos 7 días,Excluye afiliadores sin transacciones en los últimos 7 días desde la fecha de corte,7.0,181,7,27,154,73.13,26.87
